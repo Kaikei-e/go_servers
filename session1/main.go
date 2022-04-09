@@ -1,28 +1,43 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"io"
+	"log"
 	"net"
+	"time"
 )
 
 func main() {
 	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 	defer listener.Close()
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			panic(err)
+			log.Println(err)
+			continue
 		}
-
-		io.WriteString(conn, "\nHello from tcp")
-		fmt.Fprintln(conn, "How is your day?")
-		fmt.Fprintf(conn, "%v", "Well, I hope!")
-
-		conn.Close()
+		go handle(conn)
 	}
+}
+
+func handle(conn net.Conn) {
+	err := conn.SetDeadline(time.Now().Add(10 * time.Second))
+	if err != nil {
+		log.Panicln("Conn timeout")
+	}
+
+	scanner := bufio.NewScanner(conn)
+	for scanner.Scan() {
+		ln := scanner.Text()
+		fmt.Println(ln)
+		fmt.Fprintf(conn, "I heard you say: %s", ln)
+	}
+	defer conn.Close()
+
+	fmt.Println("Code got here!!!!!")
 }
